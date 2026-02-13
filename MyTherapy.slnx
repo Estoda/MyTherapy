@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="MyTherapy.API/MyTherapy.API.csproj" />
+  <Project Path="MyTherapy.Application/MyTherapy.Application.csproj" />
+  <Project Path="MyTherapy.Domain/MyTherapy.Domain.csproj" />
+  <Project Path="MyTherapy.Infrastructure/MyTherapy.Infrastructure.csproj" />
+</Solution>
