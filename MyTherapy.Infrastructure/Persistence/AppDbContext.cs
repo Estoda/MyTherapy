@@ -9,4 +9,5 @@ public class AppDbContext : DbContext
         : base(options) { }
 
     public DbSet<User> Users => Set<User>(); // Add DbSet properties for other entities as needed
+    public DbSet<Therapist> Therapists => Set<Therapist>(); // Example DbSet for a Therapist entity
 }

@@ -3,5 +3,5 @@
 public class AuthResponse
 {
     public string Token { get; set; } = null!;
-    public DateTime Epiration { get; set; }
+    public DateTime Expiration { get; set; }
 }

@@ -18,7 +18,7 @@ public class AuthController : ControllerBase
         => Ok(await _authService.RegisterPatientAsync(request));
 
     [HttpPost("register/therapist")]
-    public async Task<IActionResult> RegisterTherapist(RegisterRequest request)
+    public async Task<IActionResult> RegisterTherapist(RegisterTherapistRequest request)
         => Ok(await _authService.RegisterTherapistAsync(request));
 
     [HttpPost("login")]

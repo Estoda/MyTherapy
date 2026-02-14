@@ -9,7 +9,6 @@ using MyTherapy.Infrastructure.Persistence;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using BCrypt.Net;
 
 namespace MyTherapy.Infrastructure.Services;
 
@@ -27,7 +26,7 @@ public class AuthService : IAuthService
     public async Task<AuthResponse> RegisterPatientAsync(RegisterRequest request)
         => await RegisterAsync(request, Role.Patient);
 
-    public async Task<AuthResponse> RegisterTherapistAsync(RegisterRequest request)
+    public async Task<AuthResponse> RegisterTherapistAsync(RegisterTherapistRequest request)
         => await RegisterAsync(request, Role.Therapist);
 
     private async Task<AuthResponse> RegisterAsync(RegisterRequest request, Role role)
@@ -43,8 +42,21 @@ public class AuthService : IAuthService
             Role = role
         };
 
+
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
+
+        if (role == Role.Therapist)
+        {
+            var therapist = new Therapist
+            {
+                UserId = user.Id,
+                LicenseNumber = ((RegisterTherapistRequest)request).LicenseNumber,
+                LicenseDocumentPath = ((RegisterTherapistRequest)request).LicenseDucumentPath,
+            };
+            _context.Therapists.Add(therapist);
+            await _context.SaveChangesAsync();
+        }
 
         return GenerateToken(user);
     }
@@ -83,7 +95,7 @@ public class AuthService : IAuthService
         return new AuthResponse
         {
             Token = new JwtSecurityTokenHandler().WriteToken(token),
-            Epiration = token.ValidTo
+            Expiration = token.ValidTo
         };
     }
 
