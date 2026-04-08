@@ -10,4 +10,5 @@ public class AppDbContext : DbContext
 
     public DbSet<User> Users => Set<User>(); // Add DbSet properties for other entities as needed
     public DbSet<Therapist> Therapists => Set<Therapist>(); // Example DbSet for a Therapist entity
+    public DbSet<AvailabilitySlot> AvailabilitySlots => Set<AvailabilitySlot>(); // Example DbSet for AvailabilitySlot entity
 }

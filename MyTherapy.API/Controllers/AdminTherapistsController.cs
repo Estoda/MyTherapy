@@ -28,7 +28,7 @@ public class AdminTherapistsController : ControllerBase
         return Ok(therapists);
     }
 
-    [HttpPost("{id}/approve")]
+    [HttpPost("{id}/approve")] // id = therapist's id not user id
     public async Task<IActionResult> Approve(Guid id)
     {
         var therapist = await _context.Therapists.FindAsync(id);
