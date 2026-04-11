@@ -24,13 +24,19 @@ public class PatientBookingController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateBooking(CreateBookingRequest request)
+    public async Task<IActionResult> CreateAppointment(AppointmentResponse request)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (userId == null ) 
+            return Unauthorized("User ID not found in token."); 
 
         var patientId = Guid.Parse(userId); // Convert string to Guid
         var patient = await _context.Users
             .FirstOrDefaultAsync(u => u.Id == patientId && u.Role == Role.Patient);
+
+        if (patient == null)
+            return NotFound("Patient not found");
 
         var slot = await _context.AvailabilitySlots
             .Include(s => s.Therapist)
@@ -42,29 +48,32 @@ public class PatientBookingController : ControllerBase
         if (slot.IsBooked)
             return BadRequest("Slot already booked");
 
-        if (patient == null)
-            return NotFound("Patient not found");
 
-        var booking = new Booking
+        var appointment = new Appointment
         {
             PatientId = patient.Id,
             TherapistId = slot.TherapistId,
             SlotId = slot.Id,
-            Status = BookingStatus.Confirmed
+            AppointmentDateTime = slot.StartTime,
+            DurationMinutes = (int)(slot.EndTime - slot.StartTime).TotalMinutes,
+            Status = AppointmentStatus.Scheduled
         };
 
         slot.IsBooked = true;
 
-        _context.Bookings.Add(booking);
+        _context.Appointments.Add(appointment);
         await _context.SaveChangesAsync();
 
-        return Ok(booking);
+        return Ok(appointment);
     }
 
     [HttpGet("my")]
-    public async Task<IActionResult> GetMyBookings()
+    public async Task<IActionResult> GetMyAppointments()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (userId == null) 
+            return Unauthorized("User ID not found in token.");
 
         var patientId = Guid.Parse(userId); // Convert string to Guid
         var patient = await _context.Users
@@ -73,12 +82,22 @@ public class PatientBookingController : ControllerBase
         if (patient == null)
             return NotFound("Patient not found.");
 
-        var bookings = await _context.Bookings
-            .Include(b => b.Slot)
-            .Include(b => b.Therapist)
-            .Where(b => b.PatientId == patient.Id)
+        var appointments = await _context.Appointments
+            .Include(a => a.Therapist)
+            .ThenInclude(t => t.User)
+            .Where(a => a.PatientId == patient.Id)
             .ToListAsync();
 
-        return Ok(bookings);
+        var result = appointments.Select(a => new AppointmentResponse
+        {
+            SlotId = a.Id,
+            TherapistName = a.Therapist.User.FullName,
+            AppointmentDatetime = a.AppointmentDateTime,
+            DurationMinutes = a.DurationMinutes,
+            Status = a.Status.ToString(),
+            CreatedAt = a.CreatedAt
+        });
+
+        return Ok(result);
     }
 }

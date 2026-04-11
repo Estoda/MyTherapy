@@ -28,6 +28,14 @@ public class PatientAvailabilityController : Controller
         .ThenInclude(t => t.User)
         .ToListAsync();
 
-        return Ok(slots);
+        var result = slots.Select(s => new AvailabilitySlot
+        {
+            Id = s.Id,
+            StartTime = s.StartTime,
+            EndTime = s.EndTime,
+            IsBooked = s.IsBooked,
+        }).ToList();
+
+        return Ok(result);
     }
 }

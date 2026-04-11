@@ -42,7 +42,11 @@ public class TherapistAvailabilityController : Controller
         _context.AvailabilitySlots.Add(slot);
         await _context.SaveChangesAsync();
 
-        return Ok(slot);
+        return Ok(new CreateSlotRequest
+        {
+            StartTime = slot.StartTime,
+            EndTime = slot.EndTime
+        });
     }
 
     [HttpGet("my")]

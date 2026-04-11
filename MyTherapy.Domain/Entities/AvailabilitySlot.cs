@@ -5,7 +5,7 @@ namespace MyTherapy.Domain.Entities;
 public class AvailabilitySlot : BaseEntity 
 {
     public Guid TherapistId {get; set;}
-    public Therapist Therapist {get; set;} = null!;
+    public TherapistProfile Therapist {get; set;} = null!;
 
     public DateTime StartTime {get; set;}
     public DateTime EndTime {get; set;}

@@ -48,7 +48,7 @@ public class AuthService : IAuthService
 
         if (role == Role.Therapist)
         {
-            var therapist = new Therapist
+            var therapist = new TherapistProfile
             {
                 UserId = user.Id,
                 LicenseNumber = ((RegisterTherapistRequest)request).LicenseNumber,
