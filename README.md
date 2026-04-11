@@ -309,11 +309,13 @@ The database follows a normalized relational design with the following core tabl
 
 > This project was built as a graduation project for the **ASP.NET Core Backend Development Track**.
 
-| Role              | Name            |
-| ----------------- | --------------- |
-| Backend Developer | _Your Name_     |
-| AI / ML           | _Teammate Name_ |
-| Frontend          | _Teammate Name_ |
+| Role              | Name             |
+| ----------------- | ---------------- |
+| Backend Developer | _Ahmed Amin_     |
+| AI / ML           | _Ahmed Magdy_    |
+| AI / ML           | _Mohamed Younes_ |
+| Frontend          | _Duaa Magdy_     |
+| Frontend          | _Menna Mohamed_  |
 
 ---
 
