@@ -24,7 +24,7 @@ public class TherapistAvailabilityController : Controller
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier); // Get the therapist's user ID from the claims
 
-        var therapist = await _context.Therapists.FirstOrDefaultAsync(t => t.UserId.ToString() == userId);
+        var therapist = await _context.Therapists.Include(t => t.User).FirstOrDefaultAsync(t => t.UserId.ToString() == userId);
 
         if (therapist == null)
             return NotFound("Therapist not found.");
@@ -42,26 +42,39 @@ public class TherapistAvailabilityController : Controller
         _context.AvailabilitySlots.Add(slot);
         await _context.SaveChangesAsync();
 
-        return Ok(new CreateSlotRequest
+        return Ok(new SlotResponse
         {
+            SlotId = slot.Id,
+            TherapistName = therapist.User.FullName,
             StartTime = slot.StartTime,
-            EndTime = slot.EndTime
+            EndTime = slot.EndTime,
+            IsBooked = slot.IsBooked,
         });
     }
 
     [HttpGet("my")]
     public async Task<IActionResult> GetMySlots()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-        var therapist = await _context.Therapists.FirstOrDefaultAsync(t => t.UserId.ToString() == userId);
+        var therapist = await _context.Therapists.Include(t => t.User).FirstOrDefaultAsync(t => t.UserId == userId);
 
         if (therapist == null)
             return NotFound("Therapist not found.");
 
         var slots = await _context.AvailabilitySlots.Where(s => s.TherapistId == therapist.Id).ToListAsync();
 
-        return Ok(slots);
+        // Map to DTOs 
+        var result = slots.Select(s => new SlotResponse
+        {
+            SlotId = s.Id,
+            TherapistName = therapist.User.FullName,
+            StartTime = s.StartTime,
+            EndTime = s.EndTime,
+            IsBooked = s.IsBooked
+        }).ToList();
+
+        return Ok(result);
     }
 
     [HttpDelete("{id}")]

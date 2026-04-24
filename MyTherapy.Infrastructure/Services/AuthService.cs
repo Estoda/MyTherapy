@@ -24,12 +24,6 @@ public class AuthService : IAuthService
     }
 
     public async Task<AuthResponse> RegisterPatientAsync(RegisterRequest request)
-        => await RegisterAsync(request, Role.Patient);
-
-    public async Task<AuthResponse> RegisterTherapistAsync(RegisterTherapistRequest request)
-        => await RegisterAsync(request, Role.Therapist);
-
-    private async Task<AuthResponse> RegisterAsync(RegisterRequest request, Role role)
     {
         if (await _context.Users.AnyAsync(u => u.Email == request.Email))
             throw new ArgumentException("Email already exists!");
@@ -39,24 +33,49 @@ public class AuthService : IAuthService
             FullName = request.FullName,
             Email = request.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = role
+            Role = Role.Patient
         };
-
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        if (role == Role.Therapist)
+        var patientProfile = new PatientProfile
         {
-            var therapist = new TherapistProfile
-            {
-                UserId = user.Id,
-                LicenseNumber = ((RegisterTherapistRequest)request).LicenseNumber,
-                LicenseDocumentPath = ((RegisterTherapistRequest)request).LicenseDocumentPath,
-            };
-            _context.Therapists.Add(therapist);
-            await _context.SaveChangesAsync();
-        }
+            UserId = user.Id
+        };
+
+        _context.Patients.Add(patientProfile);
+        await _context.SaveChangesAsync();
+
+        return GenerateToken(user);
+    }
+
+    public async Task<AuthResponse> RegisterTherapistAsync(RegisterTherapistRequest request)
+    {
+        if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+            throw new ArgumentException("Email already exists!");
+
+        var user = new User
+        {
+            FullName = request.FullName,
+            Email = request.Email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            Role = Role.Therapist
+        };
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        var therapistProfile = new TherapistProfile
+        {
+            UserId = user.Id,
+            Specialization = request.Specialization,
+            LicenseNumber = request.LicenseNumber,
+            LicenseDocumentPath = request.LicenseDocumentPath
+        };
+
+        _context.Therapists.Add(therapistProfile);
+        await _context.SaveChangesAsync();
 
         return GenerateToken(user);
     }
