@@ -18,12 +18,15 @@
   - [Getting Started](#getting-started)
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)
+    - [Setting up Paymob Webhooks (local development)](#setting-up-paymob-webhooks-local-development)
   - [Project Structure](#project-structure)
   - [API Endpoints](#api-endpoints)
     - [Auth](#auth)
     - [Admin](#admin)
     - [Patient](#patient)
     - [Therapist](#therapist)
+    - [Payment](#payment)
+  - [Payment Flow](#payment-flow)
   - [Database Schema](#database-schema)
   - [Roadmap](#roadmap)
   - [Team](#team)
@@ -36,7 +39,7 @@ MyTherapy is a full-stack mental health platform that bridges the gap between pa
 
 - 🔐 Authentication & role-based authorization (Patient / Therapist / Admin)
 - 📅 Appointment scheduling with availability management
-- 💳 Payment processing for session booking
+- 💳 Payment processing via Paymob before session confirmation
 - 🎥 Video call session management
 - 💬 Real-time messaging between patients and therapists
 - 🤖 AI-powered mood analysis and mental health recommendations
@@ -77,9 +80,9 @@ MyTherapy/
 | Authentication   | JWT Bearer Tokens            |
 | Password Hashing | BCrypt.Net                   |
 | API Docs         | Swagger / OpenAPI            |
+| Payment Gateway  | Paymob ✅                    |
 | Validation       | FluentValidation _(planned)_ |
 | Logging          | Serilog _(planned)_          |
-| Payments         | Paymob / Stripe _(planned)_  |
 | Video Calls      | Agora / WebRTC _(planned)_   |
 
 ---
@@ -89,21 +92,24 @@ MyTherapy/
 ### ✅ Implemented
 
 - **JWT Authentication** — Register & login for patients, therapists, and admins
-- **Role-based Authorization** — Route protection per role
+- **Role-based Authorization** — Route protection per role (Patient / Therapist / Admin)
 - **Therapist Verification** — Admin approves/rejects therapist license documents
 - **Availability Management** — Therapists create and manage time slots
-- **Appointment Booking** — Patients browse available slots and book sessions
-- **Global Exception Handling** — Consistent error responses across all endpoints
+- **Appointment Booking** — Patients browse available slots and initiate booking
+- **Payment Integration** — Full Paymob payment flow before appointment confirmation
+- **Webhook Handling** — Paymob webhook updates payment & appointment status automatically
+- **Global Exception Handling** — Consistent JSON error responses across all endpoints
+- **Circular Reference Protection** — Safe JSON serialization with IgnoreCycles
 - **Database Seeding** — Auto-creates admin account on first run
+- **Response DTOs** — No sensitive data (e.g. PasswordHash) ever exposed in API responses
 
 ### 🔄 In Progress
 
-- Payment integration
-- Session management & video calls
-- Real-time messaging
-- AI module integration
-- Ratings & reviews
-- Advanced admin dashboard
+- Session management & video calls (Phase 6)
+- AI module integration (Phase 7)
+- Ratings & reviews (Phase 8)
+- Advanced admin dashboard (Phase 9)
+- Security & performance optimization (Phase 10)
 
 ---
 
@@ -114,6 +120,7 @@ MyTherapy/
 - [.NET 9 SDK](https://dotnet.microsoft.com/download)
 - [SQL Server](https://www.microsoft.com/en-us/sql-server) (or SQL Server Express)
 - [Visual Studio 2022](https://visualstudio.microsoft.com/) or [VS Code](https://code.visualstudio.com/)
+- [Paymob account](https://paymob.com) for payment integration
 
 ### Installation
 
@@ -124,7 +131,7 @@ git clone https://github.com/yourusername/MyTherapy.git
 cd MyTherapy
 ```
 
-**2. Configure the database connection**
+**2. Configure `appsettings.json`**
 
 In `MyTherapy.API/appsettings.json`:
 
@@ -138,6 +145,12 @@ In `MyTherapy.API/appsettings.json`:
     "Issuer": "MyTherapy",
     "Audience": "MyTherapyUsers",
     "DurationInMinutes": "60"
+  },
+  "Paymob": {
+    "ApiKey": "your_paymob_api_key",
+    "IntegrationId": "your_integration_id",
+    "IframeId": "your_iframe_id",
+    "BaseUrl": "https://accept.paymob.com/api"
   }
 }
 ```
@@ -166,6 +179,21 @@ https://localhost:{port}/swagger
 > - **Email:** `admin@mytherapy.com`
 > - **Password:** `Admin@123`
 
+### Setting up Paymob Webhooks (local development)
+
+Use [ngrok](https://ngrok.com) to expose your local API to Paymob:
+
+```bash
+ngrok http https://localhost:7114
+```
+
+Then set both callback URLs in Paymob Dashboard → Developers → Payment Integrations:
+
+```
+Transaction processed callback: https://YOUR-NGROK-URL/api/payment/webhook
+Transaction response callback:  https://YOUR-NGROK-URL/api/payment/webhook
+```
+
 ---
 
 ## Project Structure
@@ -173,7 +201,7 @@ https://localhost:{port}/swagger
 ```
 MyTherapy.Domain/
 ├── Common/
-│   └── BaseEntity.cs               # Id, CreatedAt
+│   └── BaseEntity.cs
 ├── Entities/
 │   ├── User.cs
 │   ├── PatientProfile.cs
@@ -211,10 +239,14 @@ MyTherapy.Application/
 │   ├── Appointments/
 │   │   ├── CreateAppointmentRequest.cs
 │   │   └── AppointmentResponse.cs
+│   ├── Payment/
+│   │   ├── PaymentInitiateRequest.cs
+│   │   └── PaymentInitiateResponse.cs
 │   └── Therapists/
 │       └── TherapistResponse.cs
 └── Interfaces/
-    └── IAuthService.cs
+    ├── IAuthService.cs
+    └── IPaymobService.cs
 
 MyTherapy.Infrastructure/
 ├── Persistence/
@@ -222,7 +254,8 @@ MyTherapy.Infrastructure/
 │   ├── DbInitializer.cs
 │   └── Migrations/
 └── Services/
-    └── AuthService.cs
+    ├── AuthService.cs
+    └── PaymobService.cs
 
 MyTherapy.API/
 ├── Controllers/
@@ -230,7 +263,8 @@ MyTherapy.API/
 │   ├── AdminTherapistsController.cs
 │   ├── PatientAvailabilityController.cs
 │   ├── PatientAppointmentController.cs
-│   └── TherapistAvailabilityController.cs
+│   ├── TherapistAvailabilityController.cs
+│   └── PaymentController.cs
 ├── Middleware/
 │   └── ExceptionMiddleware.cs
 └── Program.cs
@@ -261,7 +295,6 @@ MyTherapy.API/
 | Method | Endpoint                       | Description            | Auth    |
 | ------ | ------------------------------ | ---------------------- | ------- |
 | GET    | `/api/patient/availability`    | Browse available slots | Patient |
-| POST   | `/api/patient/appointments`    | Book an appointment    | Patient |
 | GET    | `/api/patient/appointments/my` | View my appointments   | Patient |
 
 ### Therapist
@@ -272,6 +305,34 @@ MyTherapy.API/
 | GET    | `/api/therapist/availability/my`   | View my slots            | Therapist |
 | DELETE | `/api/therapist/availability/{id}` | Delete a slot            | Therapist |
 
+### Payment
+
+| Method | Endpoint                | Description                                           | Auth             |
+| ------ | ----------------------- | ----------------------------------------------------- | ---------------- |
+| POST   | `/api/payment/initiate` | Initiate Paymob payment for a slot                    | Patient          |
+| POST   | `/api/payment/webhook`  | Paymob webhook — updates payment & appointment status | ❌ (Paymob only) |
+
+---
+
+## Payment Flow
+
+```
+Patient calls POST /api/payment/initiate { slotId }
+        ↓
+API creates Appointment (Scheduled) + Payment (Pending)
+        ↓
+API calls Paymob → returns { paymentUrl, appointmentId }
+        ↓
+Frontend opens paymentUrl (Paymob iframe)
+        ↓
+Patient enters card details on Paymob
+        ↓
+Paymob calls POST /api/payment/webhook
+        ↓
+✅ Success → Payment = Successful, Appointment = Confirmed
+❌ Failure → Payment = Failed, Appointment = Cancelled, Slot freed
+```
+
 ---
 
 ## Database Schema
@@ -281,8 +342,8 @@ The database follows a normalized relational design with the following core tabl
 - **Users** — Base account info for all roles
 - **PatientProfiles / TherapistProfiles / AdminProfiles** — Role-specific profile data
 - **AvailabilitySlots** — Therapist time slots
-- **Appointments** — Booked sessions between patient and therapist
-- **Payments** — Transaction records linked to appointments
+- **Appointments** — Booked sessions between patient and therapist (linked to slot & payment)
+- **Payments** — Transaction records with Paymob transaction ID, status, and method
 - **Sessions** — Video call session data with AI analysis
 - **Conversations & Messages** — In-app messaging system
 - **Notifications** — System, payment, and reminder notifications
@@ -291,12 +352,12 @@ The database follows a normalized relational design with the following core tabl
 
 ## Roadmap
 
-- [x] Phase 1 — Project Setup & Architecture
-- [x] Phase 2 — Authentication & Authorization
+- [x] Phase 1 — Project Setup & Clean Architecture
+- [x] Phase 2 — Authentication & JWT Authorization
 - [x] Phase 3 — Therapist Verification (Admin)
 - [x] Phase 4 — Availability & Appointment Booking
-- [ ] Phase 5 — Payment Integration (Paymob)
-- [ ] Phase 6 — Video Session Management (Agora)
+- [x] Phase 5 — Payment Integration (Paymob) ✅
+- [ ] Phase 6 — Video Session Management
 - [ ] Phase 7 — AI Module Integration
 - [ ] Phase 8 — Ratings & Reviews
 - [ ] Phase 9 — Advanced Admin Dashboard
@@ -309,13 +370,13 @@ The database follows a normalized relational design with the following core tabl
 
 > This project was built as a graduation project for the **ASP.NET Core Backend Development Track**.
 
-| Role              | Name             |
-| ----------------- | ---------------- |
-| Backend Developer | _Ahmed Amin_     |
-| AI / ML           | _Ahmed Magdy_    |
-| AI / ML           | _Mohamed Younes_ |
-| Frontend          | _Duaa Magdy_     |
-| Frontend          | _Menna Mohamed_  |
+| Role              | Name           |
+| ----------------- | -------------- |
+| Backend Developer | Ahmed Amin     |
+| AI / ML           | Ahmed Magdy    |
+| AI / ML           | Mohamed Younes |
+| Frontend          | Duaa Magdy     |
+| Frontend          | Menna Mohamed  |
 
 ---
 
