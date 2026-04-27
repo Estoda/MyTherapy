@@ -46,6 +46,8 @@ builder.Services.AddAuthentication("Bearer").AddJwtBearer("Bearer", options =>
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddHttpClient<IPaymobService, PaymobService>();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())

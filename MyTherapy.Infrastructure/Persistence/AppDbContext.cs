@@ -63,6 +63,13 @@ public class AppDbContext : DbContext
             .HasForeignKey(s => s.TherapistId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // Appointment -> AvailabilitySlot (N:1)
+        modelBuilder.Entity<Appointment>()
+            .HasOne(a => a.Slot)
+            .WithMany()
+            .HasForeignKey(a => a.SlotId)
+            .OnDelete(DeleteBehavior.NoAction);
+
         // Appointment -> Patient & Therapist (N:1)
         modelBuilder.Entity<Appointment>()
             .HasOne(a => a.Patient)
