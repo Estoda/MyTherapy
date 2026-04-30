@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<Review> Reviews => Set<Review>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -146,5 +147,34 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(n => n.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Review → Appointment (N:1)
+        modelBuilder.Entity<Review>()
+            .HasOne(r => r.Appointment)
+            .WithMany()
+            .HasForeignKey(r => r.AppointmentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // one review per appointment - unique index on AppointmentId
+        modelBuilder.Entity<Review>()
+            .HasIndex(r => r.AppointmentId)
+            .IsUnique();
+
+        // Review → Patient & Therapist (N:1)
+        modelBuilder.Entity<Review>()
+            .HasOne(r => r.Patient)
+            .WithMany()
+            .HasForeignKey(r => r.PatientId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<Review>()
+            .HasOne(r => r.Therapist)
+            .WithMany()
+            .HasForeignKey(r => r.TherapistId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // Rating should be between 1 and 5
+        modelBuilder.Entity<Review>()
+            .ToTable(t => t.HasCheckConstraint("CK_Review_Rating", "[Rating] >= 1 AND [Rating] <= 5"));
     }
 }

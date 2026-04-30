@@ -26,6 +26,7 @@
     - [Patient](#patient)
     - [Therapist](#therapist)
     - [Payment](#payment)
+    - [Reviews](#reviews)
   - [Payment Flow](#payment-flow)
   - [Database Schema](#database-schema)
   - [Roadmap](#roadmap)
@@ -98,6 +99,9 @@ MyTherapy/
 - **Appointment Booking** — Patients browse available slots and initiate booking
 - **Payment Integration** — Full Paymob payment flow before appointment confirmation
 - **Webhook Handling** — Paymob webhook updates payment & appointment status automatically
+- **Ratings & Reviews** — Patients rate therapists after completed sessions (1–5 stars)
+- **Running Rating Average** — TherapistProfile rating auto-updated on every new review
+- **Duplicate Review Prevention** — One review per appointment enforced at DB level
 - **Global Exception Handling** — Consistent JSON error responses across all endpoints
 - **Circular Reference Protection** — Safe JSON serialization with IgnoreCycles
 - **Database Seeding** — Auto-creates admin account on first run
@@ -107,7 +111,6 @@ MyTherapy/
 
 - Session management & video calls (Phase 6)
 - AI module integration (Phase 7)
-- Ratings & reviews (Phase 8)
 - Advanced admin dashboard (Phase 9)
 - Security & performance optimization (Phase 10)
 
@@ -213,7 +216,8 @@ MyTherapy.Domain/
 │   ├── Session.cs
 │   ├── Conversation.cs
 │   ├── Message.cs
-│   └── Notification.cs
+│   ├── Notification.cs
+│   └── Review.cs
 └── Enums/
     ├── Role.cs
     ├── Gender.cs
@@ -242,6 +246,9 @@ MyTherapy.Application/
 │   ├── Payment/
 │   │   ├── PaymentInitiateRequest.cs
 │   │   └── PaymentInitiateResponse.cs
+│   ├── Reviews/
+│   │   ├── CreateReviewRequest.cs
+│   │   └── ReviewResponse.cs
 │   └── Therapists/
 │       └── TherapistResponse.cs
 └── Interfaces/
@@ -264,7 +271,8 @@ MyTherapy.API/
 │   ├── PatientAvailabilityController.cs
 │   ├── PatientAppointmentController.cs
 │   ├── TherapistAvailabilityController.cs
-│   └── PaymentController.cs
+│   ├── PaymentController.cs
+│   └── ReviewController.cs
 ├── Middleware/
 │   └── ExceptionMiddleware.cs
 └── Program.cs
@@ -312,6 +320,13 @@ MyTherapy.API/
 | POST   | `/api/payment/initiate` | Initiate Paymob payment for a slot                    | Patient          |
 | POST   | `/api/payment/webhook`  | Paymob webhook — updates payment & appointment status | ❌ (Paymob only) |
 
+### Reviews
+
+| Method | Endpoint                               | Description                                      | Auth    |
+| ------ | -------------------------------------- | ------------------------------------------------ | ------- |
+| POST   | `/api/reviews`                         | Submit a review for a completed appointment      | Patient |
+| GET    | `/api/reviews/therapist/{therapistId}` | Get all reviews + rating average for a therapist | ❌      |
+
 ---
 
 ## Payment Flow
@@ -344,6 +359,7 @@ The database follows a normalized relational design with the following core tabl
 - **AvailabilitySlots** — Therapist time slots
 - **Appointments** — Booked sessions between patient and therapist (linked to slot & payment)
 - **Payments** — Transaction records with Paymob transaction ID, status, and method
+- **Reviews** — Patient reviews linked to appointments; auto-updates therapist rating average
 - **Sessions** — Video call session data with AI analysis
 - **Conversations & Messages** — In-app messaging system
 - **Notifications** — System, payment, and reminder notifications
@@ -359,7 +375,7 @@ The database follows a normalized relational design with the following core tabl
 - [x] Phase 5 — Payment Integration (Paymob) ✅
 - [ ] Phase 6 — Video Session Management
 - [ ] Phase 7 — AI Module Integration
-- [ ] Phase 8 — Ratings & Reviews
+- [x] Phase 8 — Ratings & Reviews ✅
 - [ ] Phase 9 — Advanced Admin Dashboard
 - [ ] Phase 10 — Security & Performance Optimization
 - [ ] Phase 11 — Deployment & Finalization
