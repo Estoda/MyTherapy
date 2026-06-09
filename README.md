@@ -39,6 +39,7 @@
 MyTherapy is a full-stack mental health platform that bridges the gap between patients and therapists. The backend provides a secure, scalable REST API that handles:
 
 - 🔐 Authentication & role-based authorization (Patient / Therapist / Admin)
+- 📧 Email verification before account creation
 - 📅 Appointment scheduling with availability management
 - 💳 Payment processing via Paymob before session confirmation
 - 🎥 Video call session management
@@ -80,6 +81,7 @@ MyTherapy/
 | Database         | SQL Server                   |
 | Authentication   | JWT Bearer Tokens            |
 | Password Hashing | BCrypt.Net                   |
+| Email            | MailKit (Gmail SMTP)         |
 | API Docs         | Swagger / OpenAPI            |
 | Payment Gateway  | Paymob ✅                    |
 | Validation       | FluentValidation _(planned)_ |
@@ -93,6 +95,7 @@ MyTherapy/
 ### ✅ Implemented
 
 - **JWT Authentication** — Register & login for patients, therapists, and admins
+- **Email Verification** — 6-digit code sent via Gmail SMTP before account creation; codes expire after 10 minutes
 - **Role-based Authorization** — Route protection per role (Patient / Therapist / Admin)
 - **Therapist Verification** — Admin approves/rejects therapist license documents
 - **Availability Management** — Therapists create and manage time slots
@@ -124,6 +127,7 @@ MyTherapy/
 - [SQL Server](https://www.microsoft.com/en-us/sql-server) (or SQL Server Express)
 - [Visual Studio 2022](https://visualstudio.microsoft.com/) or [VS Code](https://code.visualstudio.com/)
 - [Paymob account](https://paymob.com) for payment integration
+- A Gmail account with [App Password](https://myaccount.google.com/apppasswords) enabled for email verification
 
 ### Installation
 
@@ -154,9 +158,17 @@ In `MyTherapy.API/appsettings.json`:
     "IntegrationId": "your_integration_id",
     "IframeId": "your_iframe_id",
     "BaseUrl": "https://accept.paymob.com/api"
+  },
+  "Email": {
+    "From": "your-gmail@gmail.com",
+    "Password": "your-gmail-app-password",
+    "Host": "smtp.gmail.com",
+    "Port": "587"
   }
 }
 ```
+
+> ⚠️ Never commit real credentials to source control. Use environment variables or `appsettings.Development.json` for local secrets.
 
 **3. Apply database migrations**
 
@@ -217,7 +229,8 @@ MyTherapy.Domain/
 │   ├── Conversation.cs
 │   ├── Message.cs
 │   ├── Notification.cs
-│   └── Review.cs
+│   ├── Review.cs
+│   └── EmailVerification.cs
 └── Enums/
     ├── Role.cs
     ├── Gender.cs
@@ -236,7 +249,9 @@ MyTherapy.Application/
 │   │   ├── LoginRequest.cs
 │   │   ├── RegisterRequest.cs
 │   │   ├── RegisterTherapistRequest.cs
-│   │   └── AuthResponse.cs
+│   │   ├── AuthResponse.cs
+│   │   ├── SendVerificationCodeRequest.cs
+│   │   └── VerifyEmailRequest.cs
 │   ├── Slots/
 │   │   ├── CreateSlotRequest.cs
 │   │   └── SlotResponse.cs
@@ -253,6 +268,7 @@ MyTherapy.Application/
 │       └── TherapistResponse.cs
 └── Interfaces/
     ├── IAuthService.cs
+    ├── IEmailService.cs
     └── IPaymobService.cs
 
 MyTherapy.Infrastructure/
@@ -262,6 +278,7 @@ MyTherapy.Infrastructure/
 │   └── Migrations/
 └── Services/
     ├── AuthService.cs
+    ├── EmailService.cs
     └── PaymobService.cs
 
 MyTherapy.API/
@@ -284,11 +301,13 @@ MyTherapy.API/
 
 ### Auth
 
-| Method | Endpoint                       | Description              | Auth |
-| ------ | ------------------------------ | ------------------------ | ---- |
-| POST   | `/api/auth/register/patient`   | Register a new patient   | ❌   |
-| POST   | `/api/auth/register/therapist` | Register a new therapist | ❌   |
-| POST   | `/api/auth/login`              | Login and get JWT token  | ❌   |
+| Method | Endpoint                           | Description                                       | Auth |
+| ------ | ---------------------------------- | ------------------------------------------------- | ---- |
+| POST   | `/api/auth/send-verification-code` | Send 6-digit code to email (expires in 10 min)    | ❌   |
+| POST   | `/api/auth/verify-email`           | Verify the emailed code before registration       | ❌   |
+| POST   | `/api/auth/register/patient`       | Register a new patient (email must be verified)   | ❌   |
+| POST   | `/api/auth/register/therapist`     | Register a new therapist (email must be verified) | ❌   |
+| POST   | `/api/auth/login`                  | Login and get JWT token                           | ❌   |
 
 ### Admin
 
@@ -356,6 +375,7 @@ The database follows a normalized relational design with the following core tabl
 
 - **Users** — Base account info for all roles
 - **PatientProfiles / TherapistProfiles / AdminProfiles** — Role-specific profile data
+- **EmailVerifications** — Temporary email verification records (code + expiry + verified flag)
 - **AvailabilitySlots** — Therapist time slots
 - **Appointments** — Booked sessions between patient and therapist (linked to slot & payment)
 - **Payments** — Transaction records with Paymob transaction ID, status, and method
@@ -376,6 +396,7 @@ The database follows a normalized relational design with the following core tabl
 - [ ] Phase 6 — Video Session Management
 - [ ] Phase 7 — AI Module Integration
 - [x] Phase 8 — Ratings & Reviews ✅
+- [x] Phase 8.5 — Email Verification (MailKit + Gmail SMTP) ✅
 - [ ] Phase 9 — Advanced Admin Dashboard
 - [ ] Phase 10 — Security & Performance Optimization
 - [ ] Phase 11 — Deployment & Finalization
@@ -384,7 +405,7 @@ The database follows a normalized relational design with the following core tabl
 
 ## Team
 
-> This project was built as a graduation project for the **ASP.NET Core Backend Development Track**.
+> This project was built as a graduation project for **Fayoum University — Faculty of Computers and Artificial Intelligence**.
 
 | Role              | Name           |
 | ----------------- | -------------- |
