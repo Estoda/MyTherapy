@@ -62,6 +62,8 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddHttpClient<IPaymobService, PaymobService>();
 
+builder.Services.AddScoped<IEmailService, EmailService>();
+
 var app = builder.Build();
 
 

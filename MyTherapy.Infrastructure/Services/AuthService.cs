@@ -16,18 +16,19 @@ public class AuthService : IAuthService
 {
     private readonly AppDbContext _context;
     private readonly IConfiguration _config;
+    private readonly IEmailService _emailService;
 
-    public AuthService(AppDbContext context, IConfiguration config)
+    public AuthService(AppDbContext context, IConfiguration config, IEmailService emailService)
     {
         _context = context;
         _config = config;
+        _emailService = emailService;
     }
 
     public async Task<AuthResponse> RegisterPatientAsync(RegisterRequest request)
     {
-        if (await _context.Users.AnyAsync(u => u.Email == request.Email))
-            throw new ArgumentException("Email already exists!");
-
+        var verified = await _context.EmailVerifications
+            .FirstOrDefaultAsync(e => e.Email == request.Email && e.IsVerified) ?? throw new ArgumentException("Email has not been verified. Please verify your email first.");
         var user = new User
         {
             FullName = request.FullName,
@@ -45,6 +46,9 @@ public class AuthService : IAuthService
         };
 
         _context.Patients.Add(patientProfile);
+
+        _context.EmailVerifications.Remove(verified);
+
         await _context.SaveChangesAsync();
 
         return GenerateToken(user);
@@ -52,8 +56,8 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponse> RegisterTherapistAsync(RegisterTherapistRequest request)
     {
-        if (await _context.Users.AnyAsync(u => u.Email == request.Email))
-            throw new ArgumentException("Email already exists!");
+        var verified = await _context.EmailVerifications
+            .FirstOrDefaultAsync(e => e.Email == request.Email && e.IsVerified) ?? throw new ArgumentException("Email has not been verified. Please verify your email first.");
 
         var user = new User
         {
@@ -75,6 +79,9 @@ public class AuthService : IAuthService
         };
 
         _context.Therapists.Add(therapistProfile);
+
+        _context.EmailVerifications.Remove(verified);
+
         await _context.SaveChangesAsync();
 
         return GenerateToken(user);
@@ -118,4 +125,51 @@ public class AuthService : IAuthService
         };
     }
 
+    public async Task SendVerificationCodeAsync(string email)
+    {
+        var exists = await _context.Users.AnyAsync(u => u.Email == email);
+        if (exists)
+            throw new ArgumentException("Email is already registered!");
+
+        var code = Random.Shared.Next(100000, 999999).ToString();
+
+        var existing = await _context.EmailVerifications
+            .Where(e => e.Email == email)
+            .ToListAsync();
+
+        _context.EmailVerifications.RemoveRange(existing);
+
+        var verfication = new EmailVerification
+        {
+            Email = email,
+            Code = code,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(10),
+            IsVerified = false
+        };
+        _context.EmailVerifications.Add(verfication);
+
+        await _context.SaveChangesAsync();
+        await _emailService.SendVerificationCodeAsync(email, code);
+
+    }
+
+    public async Task<bool> VerifyEmailCodeAsync(string email, string code)
+    {
+        var record = await _context.EmailVerifications
+            .FirstOrDefaultAsync(e => e.Email == email);
+
+        if (record == null)
+            throw new KeyNotFoundException("No verification request found for this email.");
+
+        if (record.ExpiresAt < DateTime.UtcNow)
+            throw new ArgumentException("Verification code has expired.");
+
+        if (record.Code != code)
+            throw new ArgumentException("Invalid verification code.");
+
+        record.IsVerified = true;
+        await _context.SaveChangesAsync();
+
+        return true;
+    }
 }

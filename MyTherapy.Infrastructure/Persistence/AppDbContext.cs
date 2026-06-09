@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<EmailVerification> EmailVerifications => Set<EmailVerification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -176,5 +177,20 @@ public class AppDbContext : DbContext
         // Rating should be between 1 and 5
         modelBuilder.Entity<Review>()
             .ToTable(t => t.HasCheckConstraint("CK_Review_Rating", "[Rating] >= 1 AND [Rating] <= 5"));
+
+        // EmailVerification Index on Email - unique
+        modelBuilder.Entity<EmailVerification>()
+            .HasIndex(e => e.Email)
+            .IsUnique();
+
+        // TherapistProfile PricePersission
+        modelBuilder.Entity<TherapistProfile>()
+            .Property(t => t.PricePerSession)
+            .HasPrecision(10, 2);
+
+        // TherapistProfile RatingAverage
+        modelBuilder.Entity<TherapistProfile>() 
+            .Property(t => t.RatingAverage)
+            .HasPrecision(3, 2);
     }
 }

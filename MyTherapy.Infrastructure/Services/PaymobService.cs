@@ -14,10 +14,10 @@ public class PaymobService : IPaymobService
     private readonly IConfiguration _config;
 
     // Injection
-    private string BaseUrl => _config["Paymob:BaseUrl"];
-    private string ApiKey => _config["Paymob:ApiKey"];
-    private string IntegrationId => _config["Paymob:IntegrationId"];
-    private string IframeId => _config["Paymob:IframeId"];
+    private string BaseUrl => _config["Paymob:BaseUrl"]!;
+    private string ApiKey => _config["Paymob:ApiKey"]!;
+    private string IntegrationId => _config["Paymob:IntegrationId"]!;
+    private string IframeId => _config["Paymob:IframeId"]!;
 
     public PaymobService(HttpClient http, IConfiguration config)
     {

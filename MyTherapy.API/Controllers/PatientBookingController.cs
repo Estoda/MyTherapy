@@ -7,7 +7,6 @@ using MyTherapy.Infrastructure.Persistence;
 using MyTherapy.Application.DTOs.Slots;
 using System.Security.Claims;
 using MyTherapy.Domain.Entities;
-using MyTherapy.Domain.Enums;
 
 namespace MyTherapy.API.Controllers;
 
