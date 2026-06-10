@@ -11,7 +11,7 @@ public class User : BaseEntity
     public string? Phone {get; set;}
     public Gender? Gender {get; set;}
     public DateTime? DateOfBirth {get; set;}
-    public string? ProfilePictureUrl {get; set;}
+    public string? ProfilePicture { get; set; } = string.Empty;
     public bool IsAnonymous {get; set;} = false; // default to false
     public Role Role { get; set; }
     public UserStatus Status {get; set;} = UserStatus.Active; // default to Active

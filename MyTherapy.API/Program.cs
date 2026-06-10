@@ -70,7 +70,9 @@ builder.Services.AddControllers(options =>
     options.Filters.Add<VerifiedTherapistFilter>();
 });
 
-builder.Services.AddScoped<VerifiedTherapistFilter>(); 
+builder.Services.AddScoped<VerifiedTherapistFilter>();
+
+builder.Services.AddScoped<IProfileService, ProfileService>();
 
 var app = builder.Build();
 
@@ -96,6 +98,8 @@ app.UseCors("AllowAll");
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseStaticFiles();
 
 app.MapControllers();
 

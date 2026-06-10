@@ -10,6 +10,5 @@ public class RegisterRequest
     public string? Phone { get; set; }
     public Gender? Gender { get; set; }
     public DateTime? DateOfBirth { get; set; }
-    public string? ProfilePictureUrl { get; set; }
     public bool IsAnonymous { get; set; } = false;
 }
