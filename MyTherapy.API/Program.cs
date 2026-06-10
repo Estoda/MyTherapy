@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using MyTherapy.API.Filters;
 using MyTherapy.API.Middlewares;
 using MyTherapy.Application.Interfaces;
 using MyTherapy.Infrastructure.Persistence;
@@ -63,6 +64,13 @@ builder.Services.AddAuthorization();
 builder.Services.AddHttpClient<IPaymobService, PaymobService>();
 
 builder.Services.AddScoped<IEmailService, EmailService>();
+
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<VerifiedTherapistFilter>();
+});
+
+builder.Services.AddScoped<VerifiedTherapistFilter>(); 
 
 var app = builder.Build();
 
