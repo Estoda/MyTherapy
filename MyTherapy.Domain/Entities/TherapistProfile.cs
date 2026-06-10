@@ -10,8 +10,8 @@ public class TherapistProfile : BaseEntity
 
     public string Specialization { get; set; } = null!;
     public string LicenseNumber { get; set; } = null!;
-    public string LicenseDocumentPath { get; set; } = null!;
-    public int ExperienceYears { get; set; }
+    public string? LicenseDocumentPath { get; set; } = null!;
+    public int ExperienceYears { get; set; } = 0;
     public decimal PricePerSession { get; set; }
     public decimal RatingAverage { get; set; } = 0;
     public int TotalRatings { get; set; } = 0;

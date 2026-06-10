@@ -37,4 +37,26 @@ public class ProfileController : ControllerBase
             profilePictureUrl = $"{Request.Scheme}://{Request.Host}/{relativePath}"
         });
     }
+
+    [HttpPost("upload-license")]
+    [Authorize(Roles = "Therapist")]
+    public async Task<IActionResult> UploadLicenseDocument(IFormFile file)
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdStr, out var userId))
+            return Unauthorized();
+
+        var relativePath = await _profileService.UploadLicenseDocumentAsync(
+            userId,
+            file.OpenReadStream(),
+            file.FileName,
+            file.Length
+        );
+
+        return Ok(new
+        {
+            message = "License document uploaded successfully.",
+            licenseDocumentUrl = $"{Request.Scheme}://{Request.Host}/{relativePath}"
+        });
+    }
 }

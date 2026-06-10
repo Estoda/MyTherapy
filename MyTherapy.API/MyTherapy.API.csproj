@@ -23,7 +23,8 @@
 
   <ItemGroup>
     <Folder Include="Extensions\" />
-    <Folder Include="wwwroot\profiles\" />
+    <Folder Include="wwwroot\profile\" />
+    <Folder Include="wwwroot\uploads\Licenses\" />
   </ItemGroup>
 
 </Project>
