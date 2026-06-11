@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using MyTherapy.Application.Interfaces;
 using MyTherapy.Infrastructure.Persistence;
+using MyTherapy.Domain.Enums;
 
 namespace MyTherapy.Infrastructure.Services;
 
@@ -82,8 +83,12 @@ public class ProfileService : IProfileService
         if (therapist == null)
             throw new KeyNotFoundException("Therapist profile not found.");
 
+        if (therapist.LicenseDocumentPath != null && therapist.VerificationStatus != VerificationStatus.Rejected)
+            throw new InvalidOperationException("You can only re-upload your license if your previous submission was rejected.");
+
         var relativePath = $"uploads/licenses/{savedFileName}";
         therapist.LicenseDocumentPath = relativePath;
+        therapist.VerificationStatus = VerificationStatus.Pending;
         await _context.SaveChangesAsync();
 
         return relativePath;

@@ -24,8 +24,14 @@ public class VerifiedTherapistFilter : IAsyncActionFilter
             return;
         }
 
+        var allowedPaths = new[]
+        {
+            "/api/profile/verification-status",
+            "/api/profile/upload-license"
+        };
+
         var path = context.HttpContext.Request.Path.Value;
-        if (path != null && path.Equals("/api/profile/verification-status", StringComparison.OrdinalIgnoreCase))
+        if (path != null && allowedPaths.Any(p => path.Equals(p, StringComparison.OrdinalIgnoreCase)))
         {
             await next();
             return;
