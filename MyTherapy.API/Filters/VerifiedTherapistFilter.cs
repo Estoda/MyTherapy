@@ -24,6 +24,13 @@ public class VerifiedTherapistFilter : IAsyncActionFilter
             return;
         }
 
+        var path = context.HttpContext.Request.Path.Value;
+        if (path != null && path.Equals("/api/profile/verification-status", StringComparison.OrdinalIgnoreCase))
+        {
+            await next();
+            return;
+        }
+
         var userIdStr = user.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdStr, out var userId))
         {

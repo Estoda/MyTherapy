@@ -1,12 +1,11 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
-using MyTherapy.Domain.Enums;
 using MyTherapy.Infrastructure.Persistence;
 using MyTherapy.Application.DTOs.Slots;
 using System.Security.Claims;
 using MyTherapy.Domain.Entities;
+
 
 namespace MyTherapy.API.Controllers;
 
