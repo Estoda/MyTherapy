@@ -23,7 +23,7 @@ public class PatientBookingController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateAppointment(AppointmentResponse request)
+    public async Task<IActionResult> CreateAppointment(CreateAppointmentRequest request)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -31,14 +31,19 @@ public class PatientBookingController : ControllerBase
             return Unauthorized("User ID not found in token."); 
 
         var patientId = Guid.Parse(userId); // Convert string to Guid
-        var patient = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == patientId && u.Role == Role.Patient);
+        var user = await _context.Users.FindAsync(patientId);
+        if (user == null)
+            return NotFound("User not found");
+
+        var patient = await _context.Patients
+            .FirstOrDefaultAsync(p => p.UserId == patientId);
 
         if (patient == null)
-            return NotFound("Patient not found");
+            return NotFound($"Patient profile not found for userId: {patientId}");
 
         var slot = await _context.AvailabilitySlots
             .Include(s => s.Therapist)
+            .ThenInclude(t => t.User)
             .FirstOrDefaultAsync(s => s.Id == request.SlotId);
 
         if (slot == null)
@@ -63,7 +68,15 @@ public class PatientBookingController : ControllerBase
         _context.Appointments.Add(appointment);
         await _context.SaveChangesAsync();
 
-        return Ok(appointment);
+        return Ok(new AppointmentResponse
+        {
+            SlotId = appointment.Id,
+            TherapistName = slot.Therapist.User.FullName,
+            AppointmentDatetime = appointment.AppointmentDateTime,
+            DurationMinutes = appointment.DurationMinutes,
+            Status = appointment.Status.ToString(),
+            CreatedAt = appointment.CreatedAt
+        });
     }
 
     [HttpGet("my")]
