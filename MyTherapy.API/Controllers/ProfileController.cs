@@ -18,6 +18,24 @@ public class ProfileController : ControllerBase
 
     public ProfileController(AppDbContext context, IProfileService profileService) => (_context, _profileService) = (context, profileService);
 
+    [HttpGet("verification-status")]
+    [Authorize(Roles = "Therapist")]
+    public async Task<IActionResult> GetVerificationStatus()
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var therapist = await _context.Therapists
+            .FirstOrDefaultAsync(t => t.UserId == userId);
+
+        if (therapist == null)
+            return NotFound("Therapist not found.");
+
+        return Ok(new VerificationStatusResponse
+        {
+            VerificationStatus = therapist.VerificationStatus,
+            VerifiedAt = therapist.VerifiedAt
+        });
+    }
 
     [HttpPost("upload-picture")]
     public async Task<IActionResult> UploadProfilePicture(IFormFile file)
@@ -62,23 +80,5 @@ public class ProfileController : ControllerBase
         });
     }
 
-    [HttpGet("verification-status")]
-    [Authorize(Roles = "Therapist")]
-    public async Task<IActionResult> GetVerificationStatus()
-    {
-        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-        var therapist = await _context.Therapists
-            .FirstOrDefaultAsync(t => t.UserId == userId);
-
-        if (therapist == null)
-            return NotFound("Therapist not found.");
-
-        return Ok(new VerificationStatusResponse
-        {
-            VerificationStatus = therapist.VerificationStatus,
-            VerifiedAt = therapist.VerifiedAt
-        });
-    }
 
 }

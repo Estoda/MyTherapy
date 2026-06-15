@@ -27,7 +27,8 @@ public class VerifiedTherapistFilter : IAsyncActionFilter
         var allowedPaths = new[]
         {
             "/api/profile/verification-status",
-            "/api/profile/upload-license"
+            "/api/profile/upload-license",
+            "/api/profile/upload-picture"
         };
 
         var path = context.HttpContext.Request.Path.Value;

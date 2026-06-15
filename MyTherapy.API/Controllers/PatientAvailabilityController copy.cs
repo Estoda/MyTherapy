@@ -28,9 +28,12 @@ public class PatientAvailabilityController : Controller
         .ThenInclude(t => t.User)
         .ToListAsync();
 
-        var result = slots.Select(s => new AvailabilitySlot
+        var result = slots.Select(s => new SlotResponse
         {
-            Id = s.Id,
+            SlotId = s.Id,
+            TherapistId = s.TherapistId,
+            TherapistName = s.Therapist.User.FullName,
+            TherapistProfilePicture = s.Therapist.User.ProfilePicture != null ? $"{Request.Scheme}://{Request.Host}/{s.Therapist.User.ProfilePicture}" : null,
             StartTime = s.StartTime,
             EndTime = s.EndTime,
             IsBooked = s.IsBooked,
