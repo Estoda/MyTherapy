@@ -17,6 +17,34 @@ public class TherapistAvailabilityController : Controller
     private readonly AppDbContext _context;
     
     public TherapistAvailabilityController(AppDbContext context) => _context = context;
+    [HttpGet("my")]
+    public async Task<IActionResult> GetMySlots()
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var therapist = await _context.Therapists.Include(t => t.User).FirstOrDefaultAsync(t => t.UserId == userId);
+
+        if (therapist == null)
+            return NotFound("Therapist not found.");
+
+        var slots = await _context.AvailabilitySlots
+            .Where(s => s.TherapistId == therapist.Id)
+            .ToListAsync();
+
+        // Map to DTOs 
+        var result = slots.Select(s => new SlotResponse
+        {
+            SlotId = s.Id,
+            TherapistId = s.TherapistId,
+            TherapistName = s.Therapist.User.FullName,
+            TherapistProfilePicture = s.Therapist.User.ProfilePicture,
+            StartTime = s.StartTime,
+            EndTime = s.EndTime,
+            IsBooked = s.IsBooked
+        }).ToList();
+
+        return Ok(result);
+    }
 
     [HttpPost]
     public async Task<IActionResult> CreateSlot(CreateSlotRequest request)
@@ -51,30 +79,6 @@ public class TherapistAvailabilityController : Controller
         });
     }
 
-    [HttpGet("my")]
-    public async Task<IActionResult> GetMySlots()
-    {
-        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-        var therapist = await _context.Therapists.Include(t => t.User).FirstOrDefaultAsync(t => t.UserId == userId);
-
-        if (therapist == null)
-            return NotFound("Therapist not found.");
-
-        var slots = await _context.AvailabilitySlots.Where(s => s.TherapistId == therapist.Id).ToListAsync();
-
-        // Map to DTOs 
-        var result = slots.Select(s => new SlotResponse
-        {
-            SlotId = s.Id,
-            TherapistName = therapist.User.FullName,
-            StartTime = s.StartTime,
-            EndTime = s.EndTime,
-            IsBooked = s.IsBooked
-        }).ToList();
-
-        return Ok(result);
-    }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteSlot(Guid id)
