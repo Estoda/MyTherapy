@@ -37,30 +37,16 @@ public class PaymentController : ControllerBase
         if (patient == null)
             return NotFound("Patient profile not found.");
 
-        var slot = await _context.AvailabilitySlots
-            .Include(s => s.Therapist)
-            .FirstOrDefaultAsync(s => s.Id == request.SlotId);
+        var appointment = await _context.Appointments
+            .Include(a => a.Therapist)
+            .FirstOrDefaultAsync(a => a.Id == request.AppointmentId);
 
-        if (slot == null)
-            return NotFound("Slot not found.");
+        if (appointment == null)
+            return NotFound("Appointment not found.");
 
-        if (slot.IsBooked)
-            return BadRequest("Slot is already booked.");
-
-        var amount = slot.Therapist.PricePerSession;
-
-        // ✅ Step 1: Try Paymob FIRST before touching the DB
-        var appointment = new Appointment
-        {
-            PatientId = patient.Id,
-            TherapistId = slot.TherapistId,
-            SlotId = slot.Id,
-            AppointmentDateTime = slot.StartTime,
-            DurationMinutes = (int)(slot.EndTime - slot.StartTime).TotalMinutes,
-            Status = AppointmentStatus.Scheduled
-        };
-
-        _context.Appointments.Add(appointment);
+        if (appointment.Status != AppointmentStatus.Scheduled)
+            return BadRequest("Appointment is not in a valid state for payment.");
+        var amount = appointment.Therapist.PricePerSession;
 
         var payment = new Payment
         {
@@ -75,24 +61,20 @@ public class PaymentController : ControllerBase
         _context.Payments.Add(payment);
         appointment.PaymentId = payment.Id;
 
-        // ✅ Step 2: Call Paymob BEFORE saving slot as booked
         string paymentUrl;
         try
         {
             paymentUrl = await _paymob.InitiatePaymentAsync(
                 appointment.Id,
-                amount,
+                amount * 100,
                 patient.User.Email,
                 patient.User.FullName);
         }
         catch (Exception ex)
         {
-            // ✅ Paymob failed → don't save anything
             return StatusCode(500, new { message = $"Payment gateway error: {ex.Message}" });
         }
 
-        // ✅ Step 3: Only save to DB if Paymob succeeded
-        slot.IsBooked = true;
         await _context.SaveChangesAsync();
 
         return Ok(new PaymentInitiateResponse
@@ -136,11 +118,9 @@ public class PaymentController : ControllerBase
             appointment.Payment!.Status = PaymentStatus.Failed;
             appointment.Status = AppointmentStatus.Cancelled;
 
-            var slot = await _context.AvailabilitySlots
-                .FirstOrDefaultAsync(s => s.TherapistId == appointment.TherapistId && s.StartTime == appointment.AppointmentDateTime);
-
+            var slot = await _context.AvailabilitySlots.FindAsync(appointment.SlotId);
             if (slot != null)
-                slot.IsBooked = false; // Free up the slot if payment failed
+                slot.IsBooked = false;
 
         }
         await _context.SaveChangesAsync();

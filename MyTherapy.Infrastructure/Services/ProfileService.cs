@@ -83,8 +83,8 @@ public class ProfileService : IProfileService
         if (therapist == null)
             throw new KeyNotFoundException("Therapist profile not found.");
 
-        if (therapist.LicenseDocumentPath != null && therapist.VerificationStatus != VerificationStatus.Rejected)
-            throw new InvalidOperationException("You can only re-upload your license if your previous submission was rejected.");
+        if (therapist.LicenseDocumentPath != null && therapist.VerificationStatus == VerificationStatus.Approved)
+            throw new InvalidOperationException("You can only re-upload your license if you are not approved.");
 
         var relativePath = $"uploads/licenses/{savedFileName}";
         therapist.LicenseDocumentPath = relativePath;

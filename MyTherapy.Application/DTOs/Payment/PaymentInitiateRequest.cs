@@ -3,5 +3,5 @@ namespace MyTherapy.Application.DTOs.Payment;
 
 public class PaymentInitiateRequest
 {
-    public Guid SlotId { get; set; }
+    public Guid AppointmentId { get; set; }
 }

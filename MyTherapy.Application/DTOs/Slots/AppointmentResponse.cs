@@ -2,6 +2,7 @@
 
 public class AppointmentResponse
 {
+    public Guid AppointmentId { get; set; }
     public Guid SlotId { get; set; }
     public string? TherapistName { get; set; } = null!;
     public DateTime AppointmentDatetime { get; set; }

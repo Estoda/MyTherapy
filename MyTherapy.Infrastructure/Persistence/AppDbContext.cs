@@ -68,7 +68,7 @@ public class AppDbContext : DbContext
         // Appointment -> AvailabilitySlot (N:1)
         modelBuilder.Entity<Appointment>()
             .HasOne(a => a.Slot)
-            .WithMany()
+            .WithMany(s => s.Appointments)
             .HasForeignKey(a => a.SlotId)
             .OnDelete(DeleteBehavior.NoAction);
 

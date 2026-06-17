@@ -30,6 +30,9 @@ public class AdminTherapistsController : ControllerBase
         {
             Id = t.Id,
             FullName = t.User.FullName,
+            ProfilePicture = t.User.ProfilePicture == null
+                ? null
+                : $"{Request.Scheme}://{Request.Host}/{t.User.ProfilePicture}",
             Email = t.User.Email,
             LicenseNumber = t.LicenseNumber,
             VerificationStatus = t.VerificationStatus.ToString(),
@@ -49,7 +52,7 @@ public class AdminTherapistsController : ControllerBase
         therapist.VerifiedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
-        return NoContent();
+        return Ok();
     }
 
     [HttpPost("{id}/reject")]
@@ -61,6 +64,6 @@ public class AdminTherapistsController : ControllerBase
         therapist.VerificationStatus = VerificationStatus.Rejected;
 
         await _context.SaveChangesAsync();
-        return NoContent();
+        return Ok();
     }
 }

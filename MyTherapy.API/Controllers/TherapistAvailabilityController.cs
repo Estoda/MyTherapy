@@ -21,26 +21,39 @@ public class TherapistAvailabilityController : Controller
     public async Task<IActionResult> GetMySlots()
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
+        var now = DateTime.UtcNow;
         var therapist = await _context.Therapists.Include(t => t.User).FirstOrDefaultAsync(t => t.UserId == userId);
 
         if (therapist == null)
             return NotFound("Therapist not found.");
 
         var slots = await _context.AvailabilitySlots
-            .Where(s => s.TherapistId == therapist.Id)
+            .Where(s => s.TherapistId == therapist.Id && s.StartTime > now)
+            .Include(s => s.Appointments)
+                .ThenInclude(a => a.Patient)
+                    .ThenInclude(p => p.User)
             .ToListAsync();
 
         // Map to DTOs 
-        var result = slots.Select(s => new SlotResponse
+        var result = slots.Select(s =>
         {
-            SlotId = s.Id,
-            TherapistId = s.TherapistId,
-            TherapistName = s.Therapist.User.FullName,
-            TherapistProfilePicture = s.Therapist.User.ProfilePicture,
-            StartTime = s.StartTime,
-            EndTime = s.EndTime,
-            IsBooked = s.IsBooked
+            var appointment = s.Appointments.FirstOrDefault();
+            return new TherapistSlotResponse
+            {
+                SlotId = s.Id,
+                TherapistId = therapist.Id,
+                TherapistName = therapist.User.FullName,
+                TherapistProfilePicture = therapist.User.ProfilePicture != null
+                    ? $"{Request.Scheme}://{Request.Host}/{therapist.User.ProfilePicture}"
+                    : null,
+                StartTime = s.StartTime,
+                EndTime = s.EndTime,
+                IsBooked = s.IsBooked,
+                PatientName = appointment?.Patient.User.FullName,
+                PatientProfilePicture = appointment?.Patient.User.ProfilePicture != null
+                    ? $"{Request.Scheme}://{Request.Host}/{appointment.Patient.User.ProfilePicture}"
+                    : null
+            };
         }).ToList();
 
         return Ok(result);
@@ -50,8 +63,14 @@ public class TherapistAvailabilityController : Controller
     public async Task<IActionResult> CreateSlot(CreateSlotRequest request)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier); // Get the therapist's user ID from the claims
-
+        var now = DateTime.UtcNow;
         var therapist = await _context.Therapists.Include(t => t.User).FirstOrDefaultAsync(t => t.UserId.ToString() == userId);
+
+        if (request.StartTime <= now)
+            return BadRequest("Start time must be in the future.");
+
+        if (request.StartTime >= request.EndTime)
+            return BadRequest("End time must be after start time.");
 
         if (therapist == null)
             return NotFound("Therapist not found.");
@@ -69,13 +88,17 @@ public class TherapistAvailabilityController : Controller
         _context.AvailabilitySlots.Add(slot);
         await _context.SaveChangesAsync();
 
-        return Ok(new SlotResponse
+        return Ok(new TherapistSlotResponse
         {
             SlotId = slot.Id,
-            TherapistName = therapist.User.FullName,
+            TherapistId = slot.TherapistId,
+            TherapistName = slot.Therapist.User.FullName,
+            TherapistProfilePicture = therapist.User.ProfilePicture != null
+        ? $"{Request.Scheme}://{Request.Host}/{therapist.User.ProfilePicture}"
+        : null,
             StartTime = slot.StartTime,
             EndTime = slot.EndTime,
-            IsBooked = slot.IsBooked,
+            IsBooked = slot.IsBooked
         });
     }
 

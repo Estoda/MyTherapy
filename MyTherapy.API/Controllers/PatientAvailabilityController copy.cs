@@ -22,13 +22,16 @@ public class PatientAvailabilityController : Controller
     [HttpGet]
     public async Task<IActionResult> GetAvailableSlots()
     {
+
+        var now = DateTime.UtcNow;
+
         var slots = await _context.AvailabilitySlots
-        .Where(s => !s.IsBooked)
+        .Where(s => !s.IsBooked && s.StartTime > now)
         .Include(s => s.Therapist)
         .ThenInclude(t => t.User)
         .ToListAsync();
 
-        var result = slots.Select(s => new SlotResponse
+        var result = slots.Select(s => new PatientSlotResponse
         {
             SlotId = s.Id,
             TherapistId = s.TherapistId,

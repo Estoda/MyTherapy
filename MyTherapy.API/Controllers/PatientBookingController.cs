@@ -70,7 +70,8 @@ public class PatientBookingController : ControllerBase
 
         return Ok(new AppointmentResponse
         {
-            SlotId = appointment.Id,
+            AppointmentId = appointment.Id,
+            SlotId = appointment.SlotId,
             TherapistName = slot.Therapist.User.FullName,
             AppointmentDatetime = appointment.AppointmentDateTime,
             DurationMinutes = appointment.DurationMinutes,
@@ -88,8 +89,8 @@ public class PatientBookingController : ControllerBase
             return Unauthorized("User ID not found in token.");
 
         var patientId = Guid.Parse(userId); // Convert string to Guid
-        var patient = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == patientId && u.Role == Role.Patient);
+        var patient = await _context.Patients
+            .FirstOrDefaultAsync(p => p.UserId == patientId);
 
         if (patient == null)
             return NotFound("Patient not found.");
@@ -102,6 +103,7 @@ public class PatientBookingController : ControllerBase
 
         var result = appointments.Select(a => new AppointmentResponse
         {
+            AppointmentId = a.Id,
             SlotId = a.Id,
             TherapistName = a.Therapist.User.FullName,
             AppointmentDatetime = a.AppointmentDateTime,

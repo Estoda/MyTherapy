@@ -14,4 +14,8 @@ public class AvailabilitySlot : BaseEntity
     public DateTime EndTime {get; set;}
 
     public bool IsBooked {get; set;} = false;
+
+    // Navigation
+    [JsonIgnore]
+    public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
 }

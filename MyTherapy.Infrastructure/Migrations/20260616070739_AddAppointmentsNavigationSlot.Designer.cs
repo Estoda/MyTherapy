@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyTherapy.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using MyTherapy.Infrastructure.Persistence;
 namespace MyTherapy.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260616070739_AddAppointmentsNavigationSlot")]
+    partial class AddAppointmentsNavigationSlot
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -55,6 +58,9 @@ namespace MyTherapy.Infrastructure.Migrations
                     b.Property<DateTime>("AppointmentDateTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("AvailabilitySlotId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -83,6 +89,8 @@ namespace MyTherapy.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AvailabilitySlotId");
 
                     b.HasIndex("PatientId");
 
@@ -572,6 +580,10 @@ namespace MyTherapy.Infrastructure.Migrations
 
             modelBuilder.Entity("MyTherapy.Domain.Entities.Appointment", b =>
                 {
+                    b.HasOne("MyTherapy.Domain.Entities.AvailabilitySlot", null)
+                        .WithMany("Appointments")
+                        .HasForeignKey("AvailabilitySlotId");
+
                     b.HasOne("MyTherapy.Domain.Entities.PatientProfile", "Patient")
                         .WithMany()
                         .HasForeignKey("PatientId")
@@ -584,7 +596,7 @@ namespace MyTherapy.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("MyTherapy.Domain.Entities.AvailabilitySlot", "Slot")
-                        .WithMany("Appointments")
+                        .WithMany()
                         .HasForeignKey("SlotId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
