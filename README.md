@@ -23,11 +23,13 @@
   - [API Endpoints](#api-endpoints)
     - [Auth](#auth)
     - [Admin](#admin)
+    - [Profile](#profile)
     - [Patient](#patient)
     - [Therapist](#therapist)
     - [Payment](#payment)
     - [Reviews](#reviews)
-  - [Payment Flow](#payment-flow)
+    - [Users (Directory)](#users-directory)
+  - [Booking \& Payment Flow](#booking--payment-flow)
   - [Database Schema](#database-schema)
   - [Roadmap](#roadmap)
   - [Team](#team)
@@ -40,8 +42,10 @@ MyTherapy is a full-stack mental health platform that bridges the gap between pa
 
 - 🔐 Authentication & role-based authorization (Patient / Therapist / Admin)
 - 📧 Email verification before account creation
-- 📅 Appointment scheduling with availability management
-- 💳 Payment processing via Paymob before session confirmation
+- 📅 Appointment booking with availability management
+- 💳 Payment processing via Paymob after booking, before session confirmation
+- 🪪 Therapist license verification, with re-submission after rejection
+- 👥 Public browsing of patients & therapists (summary + detailed views)
 - 🎥 Video call session management
 - 💬 Real-time messaging between patients and therapists
 - 🤖 AI-powered mood analysis and mental health recommendations
@@ -56,7 +60,7 @@ The project follows **Clean Architecture** (also known as Onion Architecture), s
 
 ```
 MyTherapy/
-├── MyTherapy.API              # Presentation Layer — Controllers, Middleware
+├── MyTherapy.API              # Presentation Layer — Controllers, Middleware, Filters
 ├── MyTherapy.Application      # Application Layer — DTOs, Interfaces, Business Logic
 ├── MyTherapy.Domain           # Domain Layer — Entities, Enums, Base Classes
 └── MyTherapy.Infrastructure   # Infrastructure Layer — EF Core, Services, Persistence
@@ -98,10 +102,13 @@ MyTherapy/
 - **Email Verification** — 6-digit code sent via Gmail SMTP before account creation; codes expire after 10 minutes
 - **Role-based Authorization** — Route protection per role (Patient / Therapist / Admin)
 - **Therapist Verification** — Admin approves/rejects therapist license documents
-- **Availability Management** — Therapists create and manage time slots
-- **Appointment Booking** — Patients browse available slots and initiate booking
-- **Payment Integration** — Full Paymob payment flow before appointment confirmation
-- **Webhook Handling** — Paymob webhook updates payment & appointment status automatically
+- **License Re-submission** — Rejected therapists can re-upload their license, which resets their status back to Pending for another admin review
+- **Verification Status Check** — Therapists (including unverified ones) can check their own verification status at any time
+- **Availability Management** — Therapists create, view, and delete time slots; past slots are automatically excluded
+- **Appointment Booking** — Patients book a slot directly (`Scheduled` status); the slot is immediately marked as booked
+- **Payment-After-Booking Flow** — Patients pay for an existing appointment via Paymob; payment is tied to the appointment, not the raw slot
+- **Webhook Handling** — Paymob webhook updates payment & appointment status automatically; failed payments free the slot back up
+- **User Directory** — Authenticated users can browse summary lists of all patients/therapists, and view full details by ID
 - **Ratings & Reviews** — Patients rate therapists after completed sessions (1–5 stars)
 - **Running Rating Average** — TherapistProfile rating auto-updated on every new review
 - **Duplicate Review Prevention** — One review per appointment enforced at DB level
@@ -169,6 +176,7 @@ In `MyTherapy.API/appsettings.json`:
 ```
 
 > ⚠️ Never commit real credentials to source control. Use environment variables or `appsettings.Development.json` for local secrets.
+> ⚠️ Paymob amounts are sent in **cents**, not whole currency units — `PricePerSession` is multiplied by 100 before being sent to Paymob.
 
 **3. Apply database migrations**
 
@@ -208,6 +216,8 @@ Then set both callback URLs in Paymob Dashboard → Developers → Payment Integ
 Transaction processed callback: https://YOUR-NGROK-URL/api/payment/webhook
 Transaction response callback:  https://YOUR-NGROK-URL/api/payment/webhook
 ```
+
+> ⚠️ The ngrok URL changes on every restart — remember to update it in the Paymob dashboard each time.
 
 ---
 
@@ -254,7 +264,8 @@ MyTherapy.Application/
 │   │   └── VerifyEmailRequest.cs
 │   ├── Slots/
 │   │   ├── CreateSlotRequest.cs
-│   │   └── SlotResponse.cs
+│   │   ├── PatientSlotResponse.cs
+│   │   └── TherapistSlotResponse.cs
 │   ├── Appointments/
 │   │   ├── CreateAppointmentRequest.cs
 │   │   └── AppointmentResponse.cs
@@ -264,11 +275,16 @@ MyTherapy.Application/
 │   ├── Reviews/
 │   │   ├── CreateReviewRequest.cs
 │   │   └── ReviewResponse.cs
-│   └── Therapists/
-│       └── TherapistResponse.cs
+│   ├── Therapists/
+│   │   └── VerificationStatusResponse.cs
+│   └── Users/
+│       ├── UserSummaryResponse.cs
+│       ├── PatientDetailsResponse.cs
+│       └── TherapistDetailsResponse.cs
 └── Interfaces/
     ├── IAuthService.cs
     ├── IEmailService.cs
+    ├── IProfileService.cs
     └── IPaymobService.cs
 
 MyTherapy.Infrastructure/
@@ -279,17 +295,22 @@ MyTherapy.Infrastructure/
 └── Services/
     ├── AuthService.cs
     ├── EmailService.cs
+    ├── ProfileService.cs
     └── PaymobService.cs
 
 MyTherapy.API/
 ├── Controllers/
 │   ├── AuthController.cs
 │   ├── AdminTherapistsController.cs
+│   ├── ProfileController.cs
 │   ├── PatientAvailabilityController.cs
-│   ├── PatientAppointmentController.cs
+│   ├── PatientBookingController.cs
 │   ├── TherapistAvailabilityController.cs
 │   ├── PaymentController.cs
-│   └── ReviewController.cs
+│   ├── ReviewController.cs
+│   └── UsersController.cs
+├── Filters/
+│   └── VerifiedTherapistFilter.cs
 ├── Middleware/
 │   └── ExceptionMiddleware.cs
 └── Program.cs
@@ -317,55 +338,96 @@ MyTherapy.API/
 | POST   | `/api/admin/therapists/{id}/approve` | Approve a therapist                  | Admin |
 | POST   | `/api/admin/therapists/{id}/reject`  | Reject a therapist                   | Admin |
 
+### Profile
+
+| Method | Endpoint                           | Description                                                                                       | Auth      |
+| ------ | ---------------------------------- | ------------------------------------------------------------------------------------------------- | --------- |
+| POST   | `/api/profile/upload-picture`      | Upload/update profile picture                                                                     | Any role  |
+| POST   | `/api/profile/upload-license`      | Upload license document; resets status to `Pending` (also used for re-submission after rejection) | Therapist |
+| GET    | `/api/profile/verification-status` | Check own verification status — accessible even while `Pending`/`Rejected`                        | Therapist |
+
+> ⚠️ `VerifiedTherapistFilter` blocks unverified therapists from most therapist-only actions, but explicitly allows `verification-status` and `upload-license` so a rejected therapist can check their status and retry.
+
 ### Patient
 
-| Method | Endpoint                       | Description            | Auth    |
-| ------ | ------------------------------ | ---------------------- | ------- |
-| GET    | `/api/patient/availability`    | Browse available slots | Patient |
-| GET    | `/api/patient/appointments/my` | View my appointments   | Patient |
+| Method | Endpoint                    | Description                                                        | Auth    |
+| ------ | --------------------------- | ------------------------------------------------------------------ | ------- |
+| GET    | `/api/patient/availability` | Browse available (unbooked, future) slots with therapist info      | Patient |
+| POST   | `/api/patient/bookings`     | Book a slot → creates `Appointment` (Scheduled), marks slot booked | Patient |
+| GET    | `/api/patient/bookings/my`  | View my appointments                                               | Patient |
 
 ### Therapist
 
-| Method | Endpoint                           | Description              | Auth      |
-| ------ | ---------------------------------- | ------------------------ | --------- |
-| POST   | `/api/therapist/availability`      | Create availability slot | Therapist |
-| GET    | `/api/therapist/availability/my`   | View my slots            | Therapist |
-| DELETE | `/api/therapist/availability/{id}` | Delete a slot            | Therapist |
+| Method | Endpoint                           | Description                                                       | Auth      |
+| ------ | ---------------------------------- | ----------------------------------------------------------------- | --------- |
+| POST   | `/api/therapist/availability`      | Create availability slot (must be in the future, end after start) | Therapist |
+| GET    | `/api/therapist/availability/my`   | View my future slots, including booked ones with patient info     | Therapist |
+| DELETE | `/api/therapist/availability/{id}` | Delete a slot                                                     | Therapist |
 
 ### Payment
 
-| Method | Endpoint                | Description                                           | Auth             |
-| ------ | ----------------------- | ----------------------------------------------------- | ---------------- |
-| POST   | `/api/payment/initiate` | Initiate Paymob payment for a slot                    | Patient          |
-| POST   | `/api/payment/webhook`  | Paymob webhook — updates payment & appointment status | ❌ (Paymob only) |
+| Method | Endpoint                | Description                                                                  | Auth             |
+| ------ | ----------------------- | ---------------------------------------------------------------------------- | ---------------- |
+| POST   | `/api/payment/initiate` | Initiate Paymob payment for an **existing appointment** (`appointmentId`)    | Patient          |
+| POST   | `/api/payment/webhook`  | Paymob webhook — updates payment & appointment status, frees slot on failure | ❌ (Paymob only) |
 
 ### Reviews
 
-| Method | Endpoint                               | Description                                      | Auth    |
-| ------ | -------------------------------------- | ------------------------------------------------ | ------- |
-| POST   | `/api/reviews`                         | Submit a review for a completed appointment      | Patient |
-| GET    | `/api/reviews/therapist/{therapistId}` | Get all reviews + rating average for a therapist | ❌      |
+| Method | Endpoint                               | Description                                                     | Auth    |
+| ------ | -------------------------------------- | --------------------------------------------------------------- | ------- |
+| POST   | `/api/reviews`                         | Submit a review for a completed appointment (1 per appointment) | Patient |
+| GET    | `/api/reviews/therapist/{therapistId}` | Get all reviews + rating average for a therapist                | ❌      |
+
+### Users (Directory)
+
+| Method | Endpoint                     | Description                                                            | Auth                   |
+| ------ | ---------------------------- | ---------------------------------------------------------------------- | ---------------------- |
+| GET    | `/api/users/patients`        | List all patients (name + profile picture only)                        | Any authenticated user |
+| GET    | `/api/users/therapists`      | List all **approved** therapists (name + profile picture only)         | Any authenticated user |
+| GET    | `/api/users/patients/{id}`   | Get full patient details by ID                                         | Any authenticated user |
+| GET    | `/api/users/therapists/{id}` | Get full therapist details by ID (specialization, price, rating, etc.) | Any authenticated user |
 
 ---
 
-## Payment Flow
+## Booking & Payment Flow
+
+Booking and payment are two separate steps — the patient secures the slot first, then pays for it:
 
 ```
-Patient calls POST /api/payment/initiate { slotId }
+1. Patient browses available slots
+   GET /api/patient/availability
         ↓
-API creates Appointment (Scheduled) + Payment (Pending)
+2. Patient books a slot
+   POST /api/patient/bookings { slotId }
         ↓
-API calls Paymob → returns { paymentUrl, appointmentId }
+   API creates Appointment (Scheduled) + marks slot.IsBooked = true
         ↓
-Frontend opens paymentUrl (Paymob iframe)
+3. Patient initiates payment for that appointment
+   POST /api/payment/initiate { appointmentId }
         ↓
-Patient enters card details on Paymob
+   API creates Payment (Pending), calls Paymob, returns { paymentUrl, appointmentId }
         ↓
-Paymob calls POST /api/payment/webhook
+4. Frontend opens paymentUrl (Paymob iframe)
+   Patient enters card details
         ↓
-✅ Success → Payment = Successful, Appointment = Confirmed
-❌ Failure → Payment = Failed, Appointment = Cancelled, Slot freed
+5. Paymob calls POST /api/payment/webhook automatically
+        ↓
+   ✅ Success → Payment = Successful, Appointment stays Scheduled
+   ❌ Failure → Payment = Failed, Appointment = Cancelled, slot.IsBooked = false (slot freed)
 ```
+
+Paymob credentials stored in `appsettings.json`:
+
+```json
+"Paymob": {
+  "ApiKey": "...",
+  "IntegrationId": "...",
+  "IframeId": "...",
+  "BaseUrl": "https://accept.paymob.com/api"
+}
+```
+
+> 💡 Paymob requires `amount_cents` ≥ 10 — `PricePerSession` (in EGP) is multiplied by 100 before being sent.
 
 ---
 
@@ -376,7 +438,7 @@ The database follows a normalized relational design with the following core tabl
 - **Users** — Base account info for all roles
 - **PatientProfiles / TherapistProfiles / AdminProfiles** — Role-specific profile data
 - **EmailVerifications** — Temporary email verification records (code + expiry + verified flag)
-- **AvailabilitySlots** — Therapist time slots
+- **AvailabilitySlots** — Therapist time slots; linked to `Appointments` via `SlotId`
 - **Appointments** — Booked sessions between patient and therapist (linked to slot & payment)
 - **Payments** — Transaction records with Paymob transaction ID, status, and method
 - **Reviews** — Patient reviews linked to appointments; auto-updates therapist rating average
@@ -390,9 +452,10 @@ The database follows a normalized relational design with the following core tabl
 
 - [x] Phase 1 — Project Setup & Clean Architecture
 - [x] Phase 2 — Authentication & JWT Authorization
-- [x] Phase 3 — Therapist Verification (Admin)
+- [x] Phase 3 — Therapist Verification (Admin) + Re-submission Flow
 - [x] Phase 4 — Availability & Appointment Booking
 - [x] Phase 5 — Payment Integration (Paymob) ✅
+- [x] Phase 5.5 — User Directory Endpoints ✅
 - [ ] Phase 6 — Video Session Management
 - [ ] Phase 7 — AI Module Integration
 - [x] Phase 8 — Ratings & Reviews ✅
