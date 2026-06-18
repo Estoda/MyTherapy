@@ -34,7 +34,11 @@ public class AuthService : IAuthService
             FullName = request.FullName,
             Email = request.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = Role.Patient
+            Role = Role.Patient,
+            Gender = request.Gender,
+            Phone = request.Phone,
+            DateOfBirth = request.DateOfBirth,
+            IsAnonymous = request.IsAnonymous
         };
 
         _context.Users.Add(user);
@@ -64,7 +68,11 @@ public class AuthService : IAuthService
             FullName = request.FullName,
             Email = request.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = Role.Therapist
+            Role = Role.Therapist,
+            Gender = request.Gender,
+            Phone = request.Phone,
+            DateOfBirth = request.DateOfBirth,
+            IsAnonymous = request.IsAnonymous
         };
 
         _context.Users.Add(user);
@@ -76,6 +84,8 @@ public class AuthService : IAuthService
             Specialization = request.Specialization,
             LicenseNumber = request.LicenseNumber,
             LicenseDocumentPath = string.Empty,
+            ExperienceYears = 0,
+            Available = true,
             PricePerSession = 500
         };
 
