@@ -75,7 +75,8 @@ public class AuthService : IAuthService
             UserId = user.Id,
             Specialization = request.Specialization,
             LicenseNumber = request.LicenseNumber,
-            LicenseDocumentPath = string.Empty
+            LicenseDocumentPath = string.Empty,
+            PricePerSession = 500
         };
 
         _context.Therapists.Add(therapistProfile);
