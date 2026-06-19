@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
+using MyTherapy.Application.DTOs.Payment;
 using MyTherapy.Application.DTOs.Therapists;
 using MyTherapy.Application.Interfaces;
+using MyTherapy.Domain.Enums;
 using MyTherapy.Infrastructure.Persistence;
 using System.Security.Claims;
 
@@ -80,5 +83,64 @@ public class ProfileController : ControllerBase
         });
     }
 
+    private const decimal PlatformCommissionRate = 0.10m;
 
+    [HttpGet("earnings")]
+    [Authorize(Roles = "Therapist")]
+    public async Task<IActionResult> GetEarnings()
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var therapist = await _context.Therapists
+            .FirstOrDefaultAsync(t => t.UserId == userId);
+
+        if (therapist == null)
+            return NotFound("Therapist not found.");
+
+        var now = DateTime.UtcNow;
+        var todayStart = now.Date;
+        var monthStart = new DateTime(now.Year, now.Month, 1);
+
+        var successfulPayments = await _context.Payments
+            .Where(p => p.Status == PaymentStatus.Successful)
+            .Include(p => p.Appointment)
+            .Where(p => p.Appointment.TherapistId == therapist.Id)
+            .Include(p => p.User)
+            .ToListAsync();
+
+        decimal ApplyShare(decimal amount) => amount * (1 - PlatformCommissionRate);
+
+        var todayEarnings = successfulPayments
+            .Where(p => p.PaymentDate >= todayStart)
+            .Sum(p => ApplyShare(p.Amount));
+
+        var monthEarnings = successfulPayments
+            .Where(p => p.PaymentDate >= monthStart)
+            .Sum(p => ApplyShare(p.Amount));
+
+        var totalEarnings = successfulPayments
+            .Sum(p => ApplyShare(p.Amount));
+
+        var recentPayments = successfulPayments
+            .OrderByDescending(p => p.PaymentDate)
+            .Take(10)
+            .Select(p => new RecentPaymentResponse
+            {
+                PatientName = p.User.FullName,
+                PatientProfilePicture = p.User.ProfilePicture != null
+                ? $"{Request.Scheme}://{Request.Host}/{p.User.ProfilePicture}"
+                : null,
+                Amount = ApplyShare(p.Amount),
+                PaymentDate = p.PaymentDate
+            })
+            .ToList();
+
+        return Ok(new EarningsResponse
+        {
+            TodayEarnings = todayEarnings,
+            ThisMonthEarnings = monthEarnings,
+            TotalEarnings = totalEarnings,
+            RecentPayments = recentPayments
+        });
+    }
 }
