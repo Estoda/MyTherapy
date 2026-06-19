@@ -74,6 +74,8 @@ builder.Services.AddScoped<VerifiedTherapistFilter>();
 
 builder.Services.AddScoped<IProfileService, ProfileService>();
 
+builder.Services.AddHttpClient<IAiAnalysisService, AiAnalysisService>();
+
 var app = builder.Build();
 
 

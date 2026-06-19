@@ -12,6 +12,7 @@ public class Session : BaseEntity
     public string? RecordingLink {get; set;}
     public string? AiEmotionSummary {get; set;} // JSON
     public SessionAnalysisStatus AnalysisStatus { get; set; } = SessionAnalysisStatus.Pending;
+    public string? AiTaskId {get; set;}
 
     public DateTime? StartTime { get; set; }
     public DateTime? EndTime { get; set; }

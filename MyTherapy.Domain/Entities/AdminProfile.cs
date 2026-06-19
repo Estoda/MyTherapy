@@ -1,5 +1,4 @@
 ﻿using MyTherapy.Domain.Common;
-using MyTherapy.Domain.Enums;
 
 namespace MyTherapy.Domain.Entities;
 

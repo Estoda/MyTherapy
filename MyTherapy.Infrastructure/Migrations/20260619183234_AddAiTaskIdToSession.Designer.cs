@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyTherapy.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using MyTherapy.Infrastructure.Persistence;
 namespace MyTherapy.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260619183234_AddAiTaskIdToSession")]
+    partial class AddAiTaskIdToSession
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -43,7 +46,7 @@ namespace MyTherapy.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Admins", (string)null);
+                    b.ToTable("Admins");
                 });
 
             modelBuilder.Entity("MyTherapy.Domain.Entities.Appointment", b =>
@@ -94,7 +97,7 @@ namespace MyTherapy.Infrastructure.Migrations
 
                     b.HasIndex("TherapistId");
 
-                    b.ToTable("Appointments", (string)null);
+                    b.ToTable("Appointments");
                 });
 
             modelBuilder.Entity("MyTherapy.Domain.Entities.AvailabilitySlot", b =>
@@ -122,7 +125,7 @@ namespace MyTherapy.Infrastructure.Migrations
 
                     b.HasIndex("TherapistId");
 
-                    b.ToTable("AvailabilitySlots", (string)null);
+                    b.ToTable("AvailabilitySlots");
                 });
 
             modelBuilder.Entity("MyTherapy.Domain.Entities.Conversation", b =>
@@ -152,7 +155,7 @@ namespace MyTherapy.Infrastructure.Migrations
 
                     b.HasIndex("TherapistId");
 
-                    b.ToTable("Conversations", (string)null);
+                    b.ToTable("Conversations");
                 });
 
             modelBuilder.Entity("MyTherapy.Domain.Entities.EmailVerification", b =>
@@ -183,7 +186,7 @@ namespace MyTherapy.Infrastructure.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("EmailVerifications", (string)null);
+                    b.ToTable("EmailVerifications");
                 });
 
             modelBuilder.Entity("MyTherapy.Domain.Entities.Message", b =>
@@ -234,7 +237,7 @@ namespace MyTherapy.Infrastructure.Migrations
 
                     b.HasIndex("SenderId");
 
-                    b.ToTable("Messages", (string)null);
+                    b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("MyTherapy.Domain.Entities.Notification", b =>
@@ -267,7 +270,7 @@ namespace MyTherapy.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Notifications", (string)null);
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("MyTherapy.Domain.Entities.PatientProfile", b =>
@@ -301,7 +304,7 @@ namespace MyTherapy.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Patients", (string)null);
+                    b.ToTable("Patients");
                 });
 
             modelBuilder.Entity("MyTherapy.Domain.Entities.Payment", b =>
@@ -345,7 +348,7 @@ namespace MyTherapy.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Payments", (string)null);
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("MyTherapy.Domain.Entities.Review", b =>
@@ -381,7 +384,7 @@ namespace MyTherapy.Infrastructure.Migrations
 
                     b.HasIndex("TherapistId");
 
-                    b.ToTable("Reviews", null, t =>
+                    b.ToTable("Reviews", t =>
                         {
                             t.HasCheckConstraint("CK_Review_Rating", "[Rating] >= 1 AND [Rating] <= 5");
                         });
@@ -440,7 +443,7 @@ namespace MyTherapy.Infrastructure.Migrations
                     b.HasIndex("AppointmentId")
                         .IsUnique();
 
-                    b.ToTable("Sessions", (string)null);
+                    b.ToTable("Sessions");
                 });
 
             modelBuilder.Entity("MyTherapy.Domain.Entities.TherapistProfile", b =>
@@ -503,7 +506,7 @@ namespace MyTherapy.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Therapists", (string)null);
+                    b.ToTable("Therapists");
                 });
 
             modelBuilder.Entity("MyTherapy.Domain.Entities.User", b =>
@@ -559,7 +562,7 @@ namespace MyTherapy.Infrastructure.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("MyTherapy.Domain.Entities.AdminProfile", b =>
