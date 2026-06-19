@@ -101,6 +101,7 @@ public class PaymentController : ControllerBase
 
         var appointment = await _context.Appointments
             .Include(a => a.Payment)
+            .Include(a => a.Slot)
             .FirstOrDefaultAsync(a => a.Id == appointmentId);
 
         if (appointment == null)
@@ -112,6 +113,18 @@ public class PaymentController : ControllerBase
             appointment.Payment.PaymentDate = DateTime.UtcNow;
             appointment.Payment.TransactionId = obj.GetProperty("id").GetInt64().ToString();
             appointment.Status = AppointmentStatus.Scheduled;
+
+            var session = new Session
+            {
+                AppointmentId = appointmentId,
+                SessionLink = null,
+                RecordingLink = null,
+                AiEmotionSummary = null,
+                AnalysisStatus = SessionAnalysisStatus.Pending,
+                StartTime = appointment.Slot.StartTime,
+                EndTime = appointment.Slot.EndTime,
+                DurationMinutes = (int)(appointment.Slot.EndTime - appointment.Slot.StartTime).TotalMinutes
+            };
         }
         else
         {
