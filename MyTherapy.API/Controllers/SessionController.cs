@@ -110,8 +110,21 @@ public class SessionController : ControllerBase
             });
         }
 
+        AiTaskResult result;
+        try
+        {
+            result = await _aiService.CheckTaskStatusAsync(session.AiTaskId);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(503, new
+            {
+                message = "AI analysis service is currently unreachable. Please try again later.",
+                detail = ex.Message
+            });
+        }
+
         // Status is Processing — check with AI
-        var result = await _aiService.CheckTaskStatusAsync(session.AiTaskId);
 
         if (result.Status == "completed")
         {

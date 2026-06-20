@@ -125,6 +125,8 @@ public class PaymentController : ControllerBase
                 EndTime = appointment.Slot.EndTime,
                 DurationMinutes = (int)(appointment.Slot.EndTime - appointment.Slot.StartTime).TotalMinutes
             };
+
+            _context.Sessions.Add(session);
         }
         else
         {
