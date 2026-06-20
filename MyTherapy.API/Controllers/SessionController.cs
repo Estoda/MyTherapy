@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using MyTherapy.Application.DTOs.AiAnalysis;
+using MyTherapy.Application.DTOs.Sessions;
 using MyTherapy.Application.Interfaces;
 using MyTherapy.Domain.Enums;
 using MyTherapy.Infrastructure.Persistence;
@@ -144,6 +144,40 @@ public class SessionController : ControllerBase
             SessionId = session.Id,
             Status = session.AnalysisStatus.ToString(),
             AiEmotionSummary = session.AnalysisStatus == SessionAnalysisStatus.Done ? session.AiEmotionSummary : null
+        });
+    }
+
+    [HttpGet("by-appointment/{appointmentId}")]
+    public async Task<IActionResult> GetSessionsByAppointment(Guid appointmentId)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var appointment = await _context.Appointments
+            .Include(a => a.Session)
+            .Include(a => a.Patient)
+            .Include(a => a.Therapist)
+            .FirstOrDefaultAsync(a => a.Id == appointmentId);
+
+        if (appointment == null)
+            return NotFound("Appointment not found.");
+
+        var isPatient = appointment.Patient.UserId == userId;
+        var isTherapist = appointment.Therapist.UserId == userId;
+
+        if (!isPatient && !isTherapist)
+            return Forbid();
+
+        if (appointment.Session == null)
+            return NotFound("Session not found for this appointment.");
+
+        return Ok(new SessionResponse
+        {
+            SessionId = appointment.Session.Id,
+            AppointmentId = appointment.Id,
+            AnalysisStatus = appointment.Session.AnalysisStatus,
+            RecordingLink = appointment.Session.RecordingLink != null
+            ? $"{Request.Scheme}://{Request.Host}/{appointment.Session.RecordingLink}"
+            : null
         });
     }
 }

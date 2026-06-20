@@ -1,4 +1,4 @@
-﻿namespace MyTherapy.Application.DTOs.AiAnalysis;
+﻿namespace MyTherapy.Application.DTOs.Sessions;
 
 public class AnalysisStatusResponse
 {
